@@ -610,8 +610,13 @@ defmodule AxonOnnx.Deserialize do
     ind = input!(ind, axon, params, used_params)
     gather_options = options!(attrs)
 
+    normalize = fn
+      %Axon.Node{op: :constant, opts: [value: v]} -> v
+      other -> other
+    end
+
     {updated_axon, updated_params} =
-      case {get_axon_node(x), get_axon_node(ind)} do
+      case {normalize.(get_axon_node(x)), normalize.(get_axon_node(ind))} do
         {%Nx.Tensor{} = kernel, %Axon.Node{}} ->
           {in_size, out_size} = Nx.shape(kernel)
           layer = Axon.embedding(ind, in_size, out_size, name: output_name)
@@ -619,13 +624,6 @@ defmodule AxonOnnx.Deserialize do
           updated_params = Map.put(used_params, output_name, %{"kernel" => kernel})
           updated_axon = Map.put(axon, output_name, layer)
           {updated_axon, updated_params}
-
-        {%Axon.Node{op: :constant, opts: [value: x]},
-         %Axon.Node{op: :constant, opts: [value: ind]}} ->
-          new_value = Nx.take(x, Nx.as_type(ind, {:s, 64}))
-          layer = Axon.constant(new_value, name: output_name)
-          updated_axon = Map.put(axon, output_name, layer)
-          {updated_axon, used_params}
 
         {%Nx.Tensor{} = x, %Nx.Tensor{} = ind} ->
           new_value = Nx.take(x, Nx.as_type(ind, {:s, 64}))
@@ -1330,7 +1328,7 @@ defmodule AxonOnnx.Deserialize do
     limit = constant!(limit, axon, params, used_params) |> Nx.to_number()
     delta = constant!(delta, axon, params, used_params) |> Nx.to_number()
 
-    number_of_elements = max(ceil(div(limit - start, delta)), 0)
+    number_of_elements = max(ceil(div(floor(limit - start), floor(delta))), 0)
 
     vals =
       for i <- 0..(number_of_elements - 1) do
@@ -2183,6 +2181,34 @@ defmodule AxonOnnx.Deserialize do
     updated_axon = Map.put(axon, output_name, output)
 
     {updated_axon, params, used_params}
+  end
+
+  defp recur_nodes(node = %Node{op_type: "Resize", input: input, output: [output_name]}, {axon, params, used_params}) do
+    attrs = options!(node.attribute)
+
+    case Map.fetch!(attrs, "mode") do
+      "nearest" ->
+        [inp_name, "", scale_name] = input
+        inp = input!(inp_name, axon, params, used_params)
+        scale = constant!(scale_name, axon, params, used_params)
+
+        template_inputs =
+          inp
+          |> Axon.get_inputs()
+          |> Enum.map(fn {k, v} -> {k, Nx.template(v, :f32)} end)
+          |> Enum.into(%{})
+        {_batch, _depth, x, y} = Axon.get_output_shape(inp, template_inputs)
+
+        {4} = Nx.shape(scale)
+        [1.0, 1.0, xs, ys] = Nx.to_flat_list(scale)
+
+        resize = {floor(x * xs), floor(y * ys)}
+        output = Axon.resize(inp, resize, channels: :first)
+
+        updated_axon = Map.put(axon, output_name, output)
+
+        {updated_axon, params, used_params}
+    end
   end
 
   defp recur_nodes(%Node{op_type: unsupported}, _) do
