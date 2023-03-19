@@ -361,7 +361,7 @@ defmodule AxonOnnx.Deserialize do
     {"LessOrEqual", &Nx.less_equal/2, :less_or_equal},
     {"Mod", &Nx.remainder/2, :mod},
     {"Or", &Nx.logical_or/2, :logical_or},
-    {"Pow", &Nx.power/2, :power},
+    {"Pow", &Nx.pow/2, :power},
     {"Xor", &Nx.logical_xor/2, :logical_xor}
   ]
 
@@ -1906,7 +1906,7 @@ defmodule AxonOnnx.Deserialize do
     shape = random_options["shape"]
     nx_type = onnx_type_to_nx_type(dtype)
 
-    tensor = Nx.random_uniform(List.to_tuple(shape), low, high, type: nx_type)
+    tensor = Nx.Random.uniform(List.to_tuple(shape), low, high, type: nx_type)
     layer = Axon.constant(tensor, name: output_name)
     updated_axon = Map.put(axon, output_name, layer)
 
@@ -1937,20 +1937,20 @@ defmodule AxonOnnx.Deserialize do
       case get_axon_node(inp) do
         %Axon.Node{op: :constant, opts: [value: v]} ->
           shape = Nx.shape(v)
-          tensor = Nx.random_uniform(shape, low, high, type: nx_type)
+          tensor = Nx.Random.uniform(shape, low, high, type: nx_type)
           Axon.constant(tensor, name: output_name)
 
         %Axon.Node{} ->
           fun = fn x, _opts ->
             shape = Nx.shape(x)
-            Nx.random_uniform(shape, low, high, type: nx_type)
+            Nx.Random.uniform(shape, low, high, type: nx_type)
           end
 
           Axon.layer(fun, [inp], name: output_name, op_name: :random_uniform_like)
 
         %Nx.Tensor{} = t ->
           shape = Nx.shape(t)
-          tensor = Nx.random_uniform(shape, low, high, type: nx_type)
+          tensor = Nx.Random.uniform(shape, low, high, type: nx_type)
           Axon.constant(tensor, name: output_name)
       end
 
@@ -1973,7 +1973,7 @@ defmodule AxonOnnx.Deserialize do
     shape = random_options["shape"]
     nx_type = onnx_type_to_nx_type(dtype)
 
-    tensor = Nx.random_normal(List.to_tuple(shape), mean, scale, type: nx_type)
+    tensor = Nx.Random.normal(List.to_tuple(shape), mean, scale, type: nx_type)
     layer = Axon.constant(tensor, name: output_name)
     updated_axon = Map.put(axon, output_name, layer)
 
@@ -2004,20 +2004,20 @@ defmodule AxonOnnx.Deserialize do
       case get_axon_node(inp) do
         %Axon.Node{op: :constant, opts: [value: v]} ->
           shape = Nx.shape(v)
-          tensor = Nx.random_normal(shape, mean, scale, type: nx_type)
+          tensor = Nx.Random.normal(shape, mean, scale, type: nx_type)
           Axon.constant(tensor, name: output_name)
 
         %Axon.Node{} ->
           fun = fn x, _opts ->
             shape = Nx.shape(x)
-            Nx.random_normal(shape, mean, scale, type: nx_type)
+            Nx.Random.normal(shape, mean, scale, type: nx_type)
           end
 
           Axon.layer(fun, [inp], name: output_name, op_name: :random_uniform_like)
 
         %Nx.Tensor{} = t ->
           shape = Nx.shape(t)
-          tensor = Nx.random_normal(shape, mean, scale, type: nx_type)
+          tensor = Nx.Random.normal(shape, mean, scale, type: nx_type)
           Axon.constant(tensor, name: output_name)
       end
 
