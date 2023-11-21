@@ -2186,29 +2186,29 @@ defmodule AxonOnnx.Deserialize do
   defp recur_nodes(node = %Node{op_type: "Resize", input: input, output: [output_name]}, {axon, params, used_params}) do
     attrs = options!(node.attribute)
     {axon, params, used_params}
-     # case Map.fetch!(attrs, "mode") do
-     # "nearest" ->
-     #   [inp_name, "", "", scale_name] = input
-     #   inp = input!(inp_name, axon, params, used_params)
-     #   scale = constant!(scale_name, axon, params, used_params)
+     case Map.fetch!(attrs, "mode") do
+     "nearest" ->
+       [inp_name, "", "", scale_name] = input
+       inp = input!(inp_name, axon, params, used_params)
+       scale = constant!(scale_name, axon, params, used_params)
 
-     #  template_inputs =
-     #    inp
-     #     |> Axon.get_inputs()
-     #     |> Enum.map(fn {k, v} -> {k, Nx.template(v, :f32)} end)
-     #    |> Enum.into(%{})
-     #  {_batch, _depth, x, y} = Axon.get_output_shape(inp, template_inputs)
+      template_inputs =
+        inp
+         |> Axon.get_inputs()
+         |> Enum.map(fn {k, v} -> {k, Nx.template(v, :f32)} end)
+        |> Enum.into(%{})
+      {_batch, _depth, x, y} = Axon.get_output_shape(inp, template_inputs)
 
-     #  {4} = Nx.shape(scale)
-     #  [_, _, xs, ys] = Nx.to_flat_list(scale)
+      {4} = Nx.shape(scale)
+      [1, 128, xs, ys] = Nx.to_flat_list(scale)
 
-     #  resize = {floor(x * xs), floor(y * ys)}
-     #  output = Axon.resize(inp, resize, channels: :first)
+      resize = {floor(x * xs), floor(y * ys)}
+      output = Axon.resize(inp, resize, channels: :first)
 
-     #  updated_axon = Map.put(axon, output_name, output)
+      updated_axon = Map.put(axon, output_name, output)
 
-     #  {updated_axon, params, used_params}
-     # end
+      {updated_axon, params, used_params}
+     end
   end
 
   defp recur_nodes(%Node{op_type: unsupported}, _) do
