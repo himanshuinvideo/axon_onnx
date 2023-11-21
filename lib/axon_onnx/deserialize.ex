@@ -2200,7 +2200,7 @@ defmodule AxonOnnx.Deserialize do
       {_batch, _depth, x, y} = Axon.get_output_shape(inp, template_inputs)
 
       {4} = Nx.shape(scale)
-      [1, 128, xs, ys] = Nx.to_flat_list(scale)
+      [1, 256, xs, ys] = Nx.to_flat_list(scale)
 
       resize = {floor(x * xs), floor(y * ys)}
       output = Axon.resize(inp, resize, channels: :first)
