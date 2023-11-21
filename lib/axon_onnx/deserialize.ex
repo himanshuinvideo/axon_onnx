@@ -2188,7 +2188,7 @@ defmodule AxonOnnx.Deserialize do
 
     case Map.fetch!(attrs, "mode") do
       "nearest" ->
-        [inp_name, "", scale_name] = input
+        [inp_name, "", "", scale_name] = input
         inp = input!(inp_name, axon, params, used_params)
         scale = constant!(scale_name, axon, params, used_params)
 
